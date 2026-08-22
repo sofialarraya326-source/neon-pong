@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<title>🏓 Neon Pong</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: Arial, Helvetica, sans-serif;
+    color: white;
+    background:
+        radial-gradient(circle at center, #162033 0%, #080b12 50%, #030408 100%);
+    overflow: hidden;
+}
+
+button,
+input {
+    font-family: inherit;
+}
+
+button {
+    border: none;
+    border-radius: 14px;
+    padding: 14px 25px;
+    font-size: 16px;
+    font-weight: bold;
+    color: white;
+    background: linear-gradient(135deg, #00bcd4, #7c4dff);
+    cursor: pointer;
+    transition: .15s;
+}
+
+button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px rgba(124,77,255,.35);
+}
+
+button:active {
+    transform: scale(.97);
+}
+
+#menu {
+    width: min(92vw, 520px);
+    padding: 35px;
+    text-align: center;
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 25px;
+    backdrop-filter: blur(15px);
+    box-shadow: 0 25px 80px rgba(0,0,0,.5);
+}
+
+.logo {
+    font-size: 55px;
+}
+
+h1 {
+    margin: 0;
+    font-size: clamp(30px, 7vw, 50px);
+    background: linear-gradient(90deg,#00e5ff,#7c4dff,#ff4081);
+    -webkit-background-clip: text;
+    color: transparent;
+}
+
+.subtitle {
+    color: #9aa4b2;
+    margin: 10px 0 30px;
+}
+
+input {
+    width: 100%;
+    margin: 15px 0;
+    padding: 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,.15);
+    background: rgba(0,0,0,.35);
+    color: white;
+    font-size: 16px;
+    outline: none;
+}
+
+input::placeholder {
+    color: #737d8c;
+}
+
+.players {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.player-card {
+    padding: 15px;
+    border-radius: 15px;
+    background: rgba(255,255,255,.05);
+    border: 1px solid rgba(255,255,255,.1);
+}
+
+.player-card span {
+    display: block;
+    font-size: 13px;
+    color: #8993a3;
+    margin-bottom: 8px;
+}
+
+#game {
+    display: none;
+    width: 100vw;
+    height: 100vh;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+}
+
+.game-top {
+    width: min(92vw, 900px);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.player-name {
+    font-weight: bold;
+}
+
+.player-one {
+    color: #00e5ff;
+}
+
+.player-two {
+    color: #ff4081;
+}
+
+.score {
+    font-size: clamp(28px,6vw,45px);
+    font-weight: bold;
+}
+
+#canvas {
+    width: min(94vw, 900px);
+    height: auto;
+    aspect-ratio: 16 / 10;
+    background: #05070c;
+    border-radius: 18px;
+    border: 1px solid rgba(255,255,255,.12);
+    box-shadow: 0 0 60px rgba(0,229,255,.08);
+    touch-action: none;
+}
+
+#waiting {
+    position: fixed;
+    inset: 0;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    background: rgba(3,4,8,.9);
+    backdrop-filter: blur(10px);
+    z-index: 20;
+}
+
+.wait-box {
+    text-align: center;
+    padding: 35px;
+    width: min(88vw,400px);
+    border-radius: 25px;
+    background: #10141d;
+    border: 1px solid rgba(255,255,255,.1);
+}
+
+.loader {
+    width: 45px;
+    height: 45px;
+    margin: 0 auto 20px;
+    border: 4px solid rgba(255,255,255,.1);
+    border-top-color: #00e5ff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.mobile-controls {
+    display: none;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.mobile-controls button {
+    width: 75px;
+    height: 55px;
+    padding: 0;
+    font-size: 25px;
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.15);
+}
+
+#message {
+    margin-top: 18px;
+    min-height: 20px;
+    color: #9aa4b2;
+    font-size: 14px;
+}
+
+#game-over {
+    position: fixed;
+    inset: 0;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    background: rgba(0,0,0,.75);
+    z-index: 30;
+}
+
+.game-over-box {
+    text-align: center;
+    padding: 40px;
+    background: #10141d;
+    border-radius: 25px;
+    border: 1px solid rgba(255,255,255,.12);
+}
+
+@media (max-width: 700px) {
+    .mobile-controls {
+        display: flex;
+    }
+
+    #menu {
+        padding: 25px;
+    }
+
+    .players {
+        gap: 8px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div id="menu">
+
+    <div class="logo">🏓</div>
+
+    <h1>NEON PONG</h1>
+
+    <div class="subtitle">
+        Multijugador por Wi-Fi
+    </div>
+
+    <input
+        id="server"
+        placeholder="IP del servidor: 192.168.1.10:3000"
+        autocomplete="off"
+    >
+
+    <button id="connect">
+        🎮 ENTRAR AL JUEGO
+    </button>
+
+    <div class="players">
+
+        <div class="player-card">
+            <span>JUGADOR 1</span>
+            🟦 W / S
+        </div>
+
+        <div class="player-card">
+            <span>JUGADOR 2</span>
+            🟥 ↑ / ↓
+        </div>
+
+    </div>
+
+    <div id="message"></div>
+
+</div>
+
+
+<div id="game">
+
+    <div class="game-top">
+
+        <div class="player-name player-one">
+            JUGADOR 1
+        </div>
+
+        <div
+            class="score"
+            id="score">
+            0 — 0
+        </div>
+
+        <div class="player-name player-two">
+            JUGADOR 2
+        </div>
+
+    </div>
+
+    <canvas
+        id="canvas"
+        width="800"
+        height="500">
+    </canvas>
+
+    <div class="mobile-controls">
+
+        <button id="up">⬆️</button>
+        <button id="down">⬇️</button>
+
+    </div>
+
+</div>
+
+
+<div id="waiting">
+
+    <div class="wait-box">
+
+        <div class="loader"></div>
+
+        <h2>Esperando al otro jugador...</h2>
+
+        <p>
+            Compartí la dirección del servidor
+            con el otro jugador.
+        </p>
+
+    </div>
+
+</div>
+
+
+<div id="game-over">
+
+    <div class="game-over-box">
+
+        <h1 id="winner-text">
+            🏆
+        </h1>
+
+        <p>
+            La partida terminó.
+        </p>
+
+    </div>
+
+</div>
+
+
+<script src="/socket.io/socket.io.js"></script>
+
+<script>
+
+const canvas =
+    document.getElementById("canvas");
+
+const ctx =
+    canvas.getContext("2d");
+
+const menu =
+    document.getElementById("menu");
+
+const game =
+    document.getElementById("game");
+
+const waiting =
+    document.getElementById("waiting");
+
+const connect =
+    document.getElementById("connect");
+
+const serverInput =
+    document.getElementById("server");
+
+const scoreElement =
+    document.getElementById("score");
+
+const message =
+    document.getElementById("message");
+
+const gameOver =
+    document.getElementById("game-over");
+
+const winnerText =
+    document.getElementById("winner-text");
+
+
+let socket = null;
+
+let myPlayer = null;
+
+let connected = false;
+
+
+let state = {
+
+    player1: false,
+    player2: false,
+
+    paddle1Y: 200,
+    paddle2Y: 200,
+
+    ballX: 400,
+    ballY: 250,
+
+    score1: 0,
+    score2: 0,
+
+    running: false
+};
+
+
+/* =========================
+   CONEXIÓN
+========================= */
+
+connect.addEventListener(
+    "click",
+    connectToServer
+);
+
+
+function connectToServer() {
+
+    let address =
+        serverInput.value.trim();
+
+
+    if (!address) {
+
+        address =
+            window.location.host;
+
+    }
+
+
+    if (
+        !address.startsWith("http://") &&
+        !address.startsWith("https://")
+    ) {
+
+        address =
+            "http://" + address;
+
+    }
+
+
+    message.textContent =
+        "Conectando...";
+
+
+    socket =
+        io(address);
+
+
+    socket.on(
+        "connect",
+        () => {
+
+            connected = true;
+
+            menu.style.display =
+                "none";
+
+            game.style.display =
+                "flex";
+
+            waiting.style.display =
+                "flex";
+
+        }
+    );
+
+
+    socket.on(
+        "playerAssigned",
+        (player) => {
+
+            myPlayer =
+                player;
+
+            message.textContent =
+                `Sos el jugador ${player}`;
+
+            console.log(
+                "Jugador asignado:",
+                player
+            );
+
+        }
+    );
+
+
+    socket.on(
+        "playersUpdate",
+        (players) => {
+
+            if (
+                players.player1 &&
+                players.player2
+            ) {
+
+                waiting.style.display =
+                    "none";
+
+            } else {
+
+                waiting.style.display =
+                    "flex";
+
+            }
+
+        }
+    );
+
+
+    socket.on(
+        "gameState",
+        (newState) => {
+
+            state =
+                newState;
+
+            updateScore();
+
+        }
+    );
+
+
+    socket.on(
+        "gameOver",
+        (data) => {
+
+            gameOver.style.display =
+                "flex";
+
+            if (
+                data.winner === myPlayer
+            ) {
+
+                winnerText.textContent =
+                    "🏆 ¡GANASTE!";
+
+            } else {
+
+                winnerText.textContent =
+                    "💀 PERDISTE";
+
+            }
+
+
+            setTimeout(() => {
+
+                gameOver.style.display =
+                    "none";
+
+            }, 3000);
+
+        }
+    );
+
+
+    socket.on(
+        "roomFull",
+        () => {
+
+            alert(
+                "La partida ya tiene dos jugadores."
+            );
+
+            location.reload();
+
+        }
+    );
+
+
+    socket.on(
+        "connect_error",
+        () => {
+
+            message.textContent =
+                "❌ No se pudo conectar al servidor.";
+
+        }
+    );
+
+}
+
+
+/* =========================
+   MARCADOR
+========================= */
+
+function updateScore() {
+
+    scoreElement.textContent =
+        `${state.score1} — ${state.score2}`;
+
+}
+
+
+/* =========================
+   MOVIMIENTO
+========================= */
+
+function move(direction) {
+
+    if (
+        !socket ||
+        !connected ||
+        !myPlayer
+    ) {
+        return;
+    }
+
+
+    socket.emit(
+        "move",
+        direction
+    );
+
+}
+
+
+/* =========================
+   TECLADO
+========================= */
+
+document.addEventListener(
+    "keydown",
+    (event) => {
+
+        if (
+            event.key === "w" ||
+            event.key === "W"
+        ) {
+
+            event.preventDefault();
+
+            if (myPlayer === 1) {
+                move("up");
+            }
+
+        }
+
+
+        if (
+            event.key === "s" ||
+            event.key === "S"
+        ) {
+
+            event.preventDefault();
+
+            if (myPlayer === 1) {
+                move("down");
+            }
+
+        }
+
+
+        if (
+            event.key === "ArrowUp"
+        ) {
+
+            event.preventDefault();
+
+            if (myPlayer === 2) {
+                move("up");
+            }
+
+        }
+
+
+        if (
+            event.key === "ArrowDown"
+        ) {
+
+            event.preventDefault();
+
+            if (myPlayer === 2) {
+                move("down");
+            }
+
+        }
+
+    }
+);
+
+
+/* =========================
+   CELULAR
+========================= */
+
+const upButton =
+    document.getElementById("up");
+
+const downButton =
+    document.getElementById("down");
+
+
+upButton.addEventListener(
+    "pointerdown",
+    (event) => {
+
+        event.preventDefault();
+
+        move("up");
+
+    }
+);
+
+
+downButton.addEventListener(
+    "pointerdown",
+    (event) => {
+
+        event.preventDefault();
+
+        move("down");
+
+    }
+);
+
+
+/* =========================
+   DIBUJAR
+========================= */
+
+function draw() {
+
+    ctx.clearRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+
+    /* Fondo */
+
+    ctx.fillStyle =
+        "#05070c";
+
+    ctx.fillRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+
+    /* Línea central */
+
+    ctx.strokeStyle =
+        "rgba(255,255,255,.12)";
+
+    ctx.setLineDash(
+        [10,15]
+    );
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+        canvas.width / 2,
+        0
+    );
+
+    ctx.lineTo(
+        canvas.width / 2,
+        canvas.height
+    );
+
+    ctx.stroke();
+
+    ctx.setLineDash([]);
+
+
+    /* Paleta 1 */
+
+    drawPaddle(
+        20,
+        state.paddle1Y,
+        "#00e5ff"
+    );
+
+
+    /* Paleta 2 */
+
+    drawPaddle(
+        canvas.width - 35,
+        state.paddle2Y,
+        "#ff4081"
+    );
+
+
+    /* Pelota */
+
+    ctx.shadowColor =
+        "#ffffff";
+
+    ctx.shadowBlur =
+        20;
+
+    ctx.fillStyle =
+        "#ffffff";
+
+    ctx.beginPath();
+
+    ctx.arc(
+        state.ballX,
+        state.ballY,
+        10,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fill();
+
+    ctx.shadowBlur =
+        0;
+
+}
+
+
+/* =========================
+   PALETA
+========================= */
+
+function drawPaddle(
+    x,
+    y,
+    color
+) {
+
+    ctx.shadowColor =
+        color;
+
+    ctx.shadowBlur =
+        18;
+
+    ctx.fillStyle =
+        color;
+
+    ctx.beginPath();
+
+    ctx.roundRect(
+        x,
+        y,
+        15,
+        100,
+        8
+    );
+
+    ctx.fill();
+
+    ctx.shadowBlur =
+        0;
+
+}
+
+
+/* =========================
+   ANIMACIÓN
+========================= */
+
+function animationLoop() {
+
+    draw();
+
+    requestAnimationFrame(
+        animationLoop
+    );
+
+}
+
+
+animationLoop();
+
+</script>
+
+</body>
+</html>
