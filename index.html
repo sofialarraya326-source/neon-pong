@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -24,11 +25,6 @@ body {
     overflow: hidden;
 }
 
-button,
-input {
-    font-family: inherit;
-}
-
 button {
     border: none;
     border-radius: 14px;
@@ -38,16 +34,10 @@ button {
     color: white;
     background: linear-gradient(135deg, #00bcd4, #7c4dff);
     cursor: pointer;
-    transition: .15s;
 }
 
 button:hover {
     transform: translateY(-2px);
-    box-shadow: 0 10px 30px rgba(124,77,255,.35);
-}
-
-button:active {
-    transform: scale(.97);
 }
 
 #menu {
@@ -58,7 +48,6 @@ button:active {
     border: 1px solid rgba(255,255,255,.12);
     border-radius: 25px;
     backdrop-filter: blur(15px);
-    box-shadow: 0 25px 80px rgba(0,0,0,.5);
 }
 
 .logo {
@@ -78,20 +67,8 @@ h1 {
     margin: 10px 0 30px;
 }
 
-input {
-    width: 100%;
-    margin: 15px 0;
-    padding: 14px;
-    border-radius: 12px;
-    border: 1px solid rgba(255,255,255,.15);
-    background: rgba(0,0,0,.35);
-    color: white;
-    font-size: 16px;
-    outline: none;
-}
-
-input::placeholder {
-    color: #737d8c;
+#connect {
+    margin-top: 10px;
 }
 
 .players {
@@ -233,7 +210,6 @@ input::placeholder {
     padding: 40px;
     background: #10141d;
     border-radius: 25px;
-    border: 1px solid rgba(255,255,255,.12);
 }
 
 @media (max-width: 700px) {
@@ -243,10 +219,6 @@ input::placeholder {
 
     #menu {
         padding: 25px;
-    }
-
-    .players {
-        gap: 8px;
     }
 }
 </style>
@@ -261,14 +233,8 @@ input::placeholder {
     <h1>NEON PONG</h1>
 
     <div class="subtitle">
-        Multijugador por Wi-Fi
+        Multijugador online
     </div>
-
-    <input
-        id="server"
-        placeholder="IP del servidor: 192.168.1.10:3000"
-        autocomplete="off"
-    >
 
     <button id="connect">
         🎮 ENTRAR AL JUEGO
@@ -288,7 +254,9 @@ input::placeholder {
 
     </div>
 
-    <div id="message"></div>
+    <div id="message">
+        Conectando al servidor...
+    </div>
 
 </div>
 
@@ -301,9 +269,7 @@ input::placeholder {
             JUGADOR 1
         </div>
 
-        <div
-            class="score"
-            id="score">
+        <div class="score" id="score">
             0 — 0
         </div>
 
@@ -320,10 +286,8 @@ input::placeholder {
     </canvas>
 
     <div class="mobile-controls">
-
         <button id="up">⬆️</button>
         <button id="down">⬇️</button>
-
     </div>
 
 </div>
@@ -338,7 +302,7 @@ input::placeholder {
         <h2>Esperando al otro jugador...</h2>
 
         <p>
-            Compartí la dirección del servidor
+            Compartí el enlace del juego
             con el otro jugador.
         </p>
 
@@ -364,6 +328,8 @@ input::placeholder {
 </div>
 
 
+<!-- Socket.IO del servidor -->
+
 <script src="/socket.io/socket.io.js"></script>
 
 <script>
@@ -386,9 +352,6 @@ const waiting =
 const connect =
     document.getElementById("connect");
 
-const serverInput =
-    document.getElementById("server");
-
 const scoreElement =
     document.getElementById("score");
 
@@ -403,9 +366,7 @@ const winnerText =
 
 
 let socket = null;
-
 let myPlayer = null;
-
 let connected = false;
 
 
@@ -428,46 +389,24 @@ let state = {
 
 
 /* =========================
-   CONEXIÓN
+   CONECTAR AUTOMÁTICAMENTE
 ========================= */
-
-connect.addEventListener(
-    "click",
-    connectToServer
-);
-
 
 function connectToServer() {
 
-    let address =
-        serverInput.value.trim();
-
-
-    if (!address) {
-
-        address =
-            window.location.host;
-
-    }
-
-
-    if (
-        !address.startsWith("http://") &&
-        !address.startsWith("https://")
-    ) {
-
-        address =
-            "http://" + address;
-
-    }
-
-
     message.textContent =
-        "Conectando...";
+        "Conectando al servidor...";
 
+
+    /*
+       window.location.origin hace que el juego
+       se conecte automáticamente a:
+
+       https://neon-pong.onrender.com
+    */
 
     socket =
-        io(address);
+        io(window.location.origin);
 
 
     socket.on(
@@ -485,6 +424,10 @@ function connectToServer() {
             waiting.style.display =
                 "flex";
 
+            console.log(
+                "🟢 Conectado al servidor"
+            );
+
         }
     );
 
@@ -496,11 +439,8 @@ function connectToServer() {
             myPlayer =
                 player;
 
-            message.textContent =
-                `Sos el jugador ${player}`;
-
             console.log(
-                "Jugador asignado:",
+                "🏓 Jugador:",
                 player
             );
 
@@ -551,6 +491,7 @@ function connectToServer() {
             gameOver.style.display =
                 "flex";
 
+
             if (
                 data.winner === myPlayer
             ) {
@@ -566,12 +507,15 @@ function connectToServer() {
             }
 
 
-            setTimeout(() => {
+            setTimeout(
+                () => {
 
-                gameOver.style.display =
-                    "none";
+                    gameOver.style.display =
+                        "none";
 
-            }, 3000);
+                },
+                3000
+            );
 
         }
     );
@@ -593,7 +537,12 @@ function connectToServer() {
 
     socket.on(
         "connect_error",
-        () => {
+        (error) => {
+
+            console.error(
+                "Error de conexión:",
+                error
+            );
 
             message.textContent =
                 "❌ No se pudo conectar al servidor.";
@@ -602,6 +551,22 @@ function connectToServer() {
     );
 
 }
+
+
+/* =========================
+   BOTÓN
+========================= */
+
+connect.addEventListener(
+    "click",
+    () => {
+
+        if (!socket) {
+            connectToServer();
+        }
+
+    }
+);
 
 
 /* =========================
@@ -629,7 +594,6 @@ function move(direction) {
     ) {
         return;
     }
-
 
     socket.emit(
         "move",
@@ -705,38 +669,35 @@ document.addEventListener(
 
 
 /* =========================
-   CELULAR
+   CONTROLES CELULAR
 ========================= */
 
-const upButton =
-    document.getElementById("up");
+document
+    .getElementById("up")
+    .addEventListener(
+        "pointerdown",
+        (event) => {
 
-const downButton =
-    document.getElementById("down");
+            event.preventDefault();
 
+            move("up");
 
-upButton.addEventListener(
-    "pointerdown",
-    (event) => {
-
-        event.preventDefault();
-
-        move("up");
-
-    }
-);
+        }
+    );
 
 
-downButton.addEventListener(
-    "pointerdown",
-    (event) => {
+document
+    .getElementById("down")
+    .addEventListener(
+        "pointerdown",
+        (event) => {
 
-        event.preventDefault();
+            event.preventDefault();
 
-        move("down");
+            move("down");
 
-    }
-);
+        }
+    );
 
 
 /* =========================
@@ -752,8 +713,6 @@ function draw() {
         canvas.height
     );
 
-
-    /* Fondo */
 
     ctx.fillStyle =
         "#05070c";
@@ -792,7 +751,7 @@ function draw() {
     ctx.setLineDash([]);
 
 
-    /* Paleta 1 */
+    /* Paleta jugador 1 */
 
     drawPaddle(
         20,
@@ -801,7 +760,7 @@ function draw() {
     );
 
 
-    /* Paleta 2 */
+    /* Paleta jugador 2 */
 
     drawPaddle(
         canvas.width - 35,
@@ -890,10 +849,10 @@ function animationLoop() {
 
 }
 
-
 animationLoop();
 
 </script>
 
 </body>
 </html>
+```
