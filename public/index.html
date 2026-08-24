@@ -204,6 +204,12 @@
             padding: 13px 8px;
         }
 
+        #bot-button {
+            grid-column: span 2;
+            margin-top: 10px;
+            background: linear-gradient(135deg, #7c4dff, #ff4081);
+        }
+
         /* =========================
            CÓDIGO
         ========================= */
@@ -576,7 +582,7 @@
         </h1>
 
         <div class="subtitle">
-            Creá una partida y jugá contra alguien
+            Creá una partida o jugá contra el bot
         </div>
 
         <input
@@ -602,6 +608,10 @@
 
             <button id="join">
                 🎮 UNIRSE
+            </button>
+
+            <button id="bot-button">
+                🤖 JUGAR CONTRA BOT
             </button>
 
         </div>
@@ -770,6 +780,9 @@
         const joinButton =
             document.getElementById("join");
 
+        const botButton =
+            document.getElementById("bot-button");
+
         const message =
             document.getElementById("message");
 
@@ -815,6 +828,7 @@
         let myPlayer = null;
         let roomCode = null;
         let myName = "";
+        let isBotMode = false;
 
         let state = {
 
@@ -830,8 +844,8 @@
             ballX: 400,
             ballY: 250,
 
-            ballDX: 5,
-            ballDY: 5,
+            ballDX: 6,
+            ballDY: 6,
 
             score1: 0,
             score2: 0,
@@ -853,14 +867,14 @@
             touchRight.style.pointerEvents =
                 "none";
 
-            if (myPlayer === 1) {
+            if (myPlayer === 1 || isBotMode) {
 
                 touchLeft.style.pointerEvents =
                     "auto";
 
             }
 
-            if (myPlayer === 2) {
+            if (myPlayer === 2 && !isBotMode) {
 
                 touchRight.style.pointerEvents =
                     "auto";
@@ -1004,6 +1018,8 @@
                 "playersUpdate",
                 (players) => {
 
+                    if (isBotMode) return;
+
                     state =
                         players;
 
@@ -1032,6 +1048,8 @@
                 "gameState",
                 (newState) => {
 
+                    if (isBotMode) return;
+
                     state =
                         newState;
 
@@ -1045,6 +1063,8 @@
             socket.on(
                 "gameOver",
                 (data) => {
+
+                    if (isBotMode) return;
 
                     gameOver.style.display =
                         "flex";
@@ -1082,6 +1102,8 @@
                 "roomDisconnected",
                 () => {
 
+                    if (isBotMode) return;
+
                     waiting.style.display =
                         "flex";
 
@@ -1102,6 +1124,90 @@
                 }
             );
 
+        }
+
+
+        /* =========================
+           MODO BOT (LOCAL)
+        ========================= */
+
+        botButton.addEventListener("click", () => {
+
+            const name = nameInput.value.trim() || "JUGADOR";
+
+            isBotMode = true;
+            myPlayer = 1;
+
+            state.name1 = name;
+            state.name2 = "BOT 🤖";
+            state.running = true;
+            state.score1 = 0;
+            state.score2 = 0;
+            state.paddle1Y = 200;
+            state.paddle2Y = 200;
+            state.ballX = 400;
+            state.ballY = 250;
+
+            menu.style.display = "none";
+            game.style.display = "flex";
+            waiting.style.display = "none";
+
+            enableTouchControls();
+            updateNames();
+            updateScore();
+        });
+
+        function resetBallLocal() {
+            state.ballX = 400;
+            state.ballY = 250;
+            state.ballDX = (Math.random() > 0.5 ? 1 : -1) * 6;
+            state.ballDY = (Math.random() * 6 - 3);
+        }
+
+        function updateBotGame() {
+            if (!isBotMode || !state.running) return;
+
+            // Movimiento de la pelota
+            state.ballX += state.ballDX;
+            state.ballY += state.ballDY;
+
+            // Rebotes superior e inferior
+            if (state.ballY <= 10 || state.ballY >= 490) {
+                state.ballDY *= -1;
+            }
+
+            // Lógica IA del BOT (Paleta derecha)
+            const paddleCenter = state.paddle2Y + 50;
+            if (paddleCenter < state.ballY - 10) {
+                state.paddle2Y += 4.5;
+            } else if (paddleCenter > state.ballY + 10) {
+                state.paddle2Y -= 4.5;
+            }
+            state.paddle2Y = Math.max(0, Math.min(400, state.paddle2Y));
+
+            // Colisión Paleta 1 (Jugador)
+            if (state.ballX <= 35 && state.ballY >= state.paddle1Y && state.ballY <= state.paddle1Y + 100) {
+                state.ballDX = Math.abs(state.ballDX) + 0.3;
+                state.ballDY += (state.ballY - (state.paddle1Y + 50)) * 0.1;
+            }
+
+            // Colisión Paleta 2 (Bot)
+            if (state.ballX >= 765 && state.ballY >= state.paddle2Y && state.ballY <= state.paddle2Y + 100) {
+                state.ballDX = -Math.abs(state.ballDX) - 0.3;
+                state.ballDY += (state.ballY - (state.paddle2Y + 50)) * 0.1;
+            }
+
+            // Puntos
+            if (state.ballX < 0) {
+                state.score2++;
+                updateScore();
+                resetBallLocal();
+            }
+            if (state.ballX > 800) {
+                state.score1++;
+                updateScore();
+                resetBallLocal();
+            }
         }
 
 
@@ -1291,6 +1397,16 @@
 
         function move(direction) {
 
+            if (isBotMode) {
+                const speed = 25;
+                if (direction === "up") {
+                    state.paddle1Y = Math.max(0, state.paddle1Y - speed);
+                } else if (direction === "down") {
+                    state.paddle1Y = Math.min(400, state.paddle1Y + speed);
+                }
+                return;
+            }
+
             if (
                 !socket ||
                 !myPlayer
@@ -1315,12 +1431,13 @@
             (event) => {
 
                 if (
-                    myPlayer === 1
+                    myPlayer === 1 || isBotMode
                 ) {
 
                     if (
                         event.key === "w" ||
-                        event.key === "W"
+                        event.key === "W" ||
+                        event.key === "ArrowUp"
                     ) {
 
                         event.preventDefault();
@@ -1330,7 +1447,8 @@
 
                     if (
                         event.key === "s" ||
-                        event.key === "S"
+                        event.key === "S" ||
+                        event.key === "ArrowDown"
                     ) {
 
                         event.preventDefault();
@@ -1341,7 +1459,7 @@
                 }
 
                 if (
-                    myPlayer === 2
+                    myPlayer === 2 && !isBotMode
                 ) {
 
                     if (
@@ -1595,6 +1713,7 @@
 
         function animationLoop() {
 
+            updateBotGame();
             draw();
 
             requestAnimationFrame(
